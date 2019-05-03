@@ -1,6 +1,10 @@
 .DS_Store
-xcuserdata
-*.xcuserdatad
-*.xccheckout
-*.mode*
-*.pbxuser
+/.build
+/Packages
+/*.xcodeproj
+/Package.resolved
+
+*.sw[po]
+*.vimsession
+
+*.AppleDouble
