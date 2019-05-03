@@ -3,70 +3,98 @@
 //  Termios
 //
 //  Created by Neil Pankey on 3/20/15.
-//  Copyright (c) 2015 Neil Pankey. All rights reserved.
+//  Copyright (c) 2019 Jacob Williams & Neil Pankey. All rights reserved.
 //
 
-import Darwin.POSIX.termios
+#if os(macOS)
+import Darwin
+#else
+import Glibc
+#endif
 
 /// Input flag values in a `termios` structure.
-public struct InputFlags : RawOptionSetType {
-    public var rawValue: UInt
+public struct InputFlags: OptionSet {
+    public var rawValue: UInt32
 
-    public init(_ value: UInt) {
+    private init(_ value: Int32) {
+        self.init(rawValue: UInt32(value))
+    }
+
+    init(_ value: UInt32) {
         rawValue = value
     }
 
-    public init(rawValue value: UInt) {
+    public init(rawValue value: UInt32) {
         rawValue = value
     }
 
-    public init(nilLiteral: ()) {
-        rawValue = 0
-    }
+    public static let zero: InputFlags = {
+        return .init(rawValue: 0)
+    }()
 
-    public static var allZeros: InputFlags {
-        return self(0)
-    }
+    /// Ignore break condition on input.
+    public static let ignoreBreak = InputFlags(IGNBRK)
 
-    /// ignore BREAK condition
-    public static let IGNBRK = InputFlags(UInt(Darwin.IGNBRK))
+    /**
+    If ignoreBreak is set, a break is ignored. If it is not set but breakInterupt is set, then a break causes the input
+    and output queues to be flushed, and if the terminal is the controlling terminal of a foreground process group, it
+    will cause a SIGINT to be sent to this foreground process group. When neither ignoreBreak nor breakInterupt are set,
+    a break reads as a null byte ('\0'), except when parityMark is set, in which case it reads as the sequence  \377 \0
+    \0.
+    */
+    public static let breakInterupt = InputFlags(BRKINT)
 
-    /// map BREAK to SIGINTR
-    public static let BRKINT = InputFlags(UInt(Darwin.BRKINT))
+    /// Ignore framing errors and parity errors.
+    public static let ignoreParity = InputFlags(IGNPAR)
 
-    /// ignore (discard) parity errors
-    public static let IGNPAR = InputFlags(UInt(Darwin.IGNPAR))
+    /**
+    If this bit is set, input bytes with parity or framing errors are marked when passed to the program. This bit is
+    meaningful only when inputParityCheck is set and ignoreParity is not set. The way erroneous bytes are marked is with
+    two preceding bytes, \377 and \0. Thus, the profram actually reads three bytes for one erroneous byte received from
+    the terminal. If a valid byte has the value \377, and strip (see below) is not set, the program might confuse it
+    with the prefix that marks a parity error. Therefore, a valid byte \377 is passed to the program as two bytes, \377
+    \377, in this case.
 
-    /// mark parity and framing errors
-    public static let PARMRK = InputFlags(UInt(Darwin.PARMRK))
+    If neither ignoreParity nor parityMark is set, read a character with a parity error or framing error as \0.
+    */
+    public static let parityMark = InputFlags(PARMRK)
 
-    /// enable checking of parity errors
-    public static let INPCK = InputFlags(UInt(Darwin.INPCK))
+    /// Enable input parity checking.
+    public static let inputParityCheck = InputFlags(INPCK)
 
-    /// strip 8th bit off chars
-    public static let ISTRIP = InputFlags(UInt(Darwin.ISTRIP))
+    /// Strip off eighth bit.
+    public static let strip = InputFlags(ISTRIP)
 
-    /// map NL into CR
-    public static let INLCR = InputFlags(UInt(Darwin.INLCR))
+    /// Translate NL to CR on input.
+    public static let nlToCR = InputFlags(INLCR)
 
-    /// ignore CR
-    public static let IGNCR = InputFlags(UInt(Darwin.IGNCR))
+    /// Ignore carriage return on input.
+    public static let ignoreCR = InputFlags(IGNCR)
 
-    /// map CR to NL (ala CRMOD)
-    public static let ICRNL = InputFlags(UInt(Darwin.ICRNL))
+    /// Translate carriage return to newline on input (unless ignoreCR is set).
+    public static let crToNL = InputFlags(ICRNL)
 
-    /// enable output flow control
-    public static let IXON = InputFlags(UInt(Darwin.IXON))
+    /// (not in POSIX) Map uppercase characters to lowercase on input.
+    public static let lowercased = InputFlags(IUCLC)
 
-    /// enable input flow control
-    public static let IXOFF = InputFlags(UInt(Darwin.IXOFF))
+    /// Enable XON/XOFF flow control on output.
+    public static let xOn = InputFlags(IXON)
 
-    /// any char will restart after stop
-    public static let IXANY = InputFlags(UInt(Darwin.IXANY))
+    /**
+    (XSI) Typing any character will restart stopped output. (The default is to allow just the START character to restart
+    output.)
+    */
+    public static let xAny = InputFlags(IXANY)
 
-    /// ring bell on input queue full
-    public static let IMAXBEL = InputFlags(UInt(Darwin.IMAXBEL))
+    /// Enable XON/XOFF flow control on output.
+    public static let xOff = InputFlags(IXOFF)
 
-    /// maintain state for UTF-8 VERASE
-    public static let IUTF8 = InputFlags(UInt(Darwin.IUTF8))
+    /**
+    (not in POSIX) Ring bell when input queue is full. Linux does not implement this bit, and acts as if it is always
+    set.
+    */
+    public static let maxBell = InputFlags(IMAXBEL)
+
+    /// (not in POSIX) Input is UTF8; this allows character-erase to be correctly performed in cooked mode.
+    public static let utf8 = InputFlags(IUTF8)
 }

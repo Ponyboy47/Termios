@@ -3,59 +3,107 @@
 //  Termios
 //
 //  Created by Neil Pankey on 3/20/15.
-//  Copyright (c) 2015 Neil Pankey. All rights reserved.
+//  Copyright (c) 2019 Jacob Williams & Neil Pankey. All rights reserved.
 //
 
-import Darwin.POSIX.termios
+#if os(macOS)
+import Darwin
+#else
+import Glibc
+#endif
 
 /// Output flag values in a `termios` structure.
-public struct OutputFlags : RawOptionSetType {
-    public var rawValue: UInt
+public struct OutputFlags: OptionSet {
+    public var rawValue: UInt32
 
-    public init(_ value: UInt) {
+    private init(_ value: Int32) {
+        self.init(rawValue: UInt32(value))
+    }
+
+    init(_ value: UInt32) {
         rawValue = value
     }
 
-    public init(rawValue value: UInt) {
+    public init(rawValue value: UInt32) {
         rawValue = value
     }
 
-    public init(nilLiteral: ()) {
-        rawValue = 0
-    }
+    public static let zero: OutputFlags = {
+        return .init(rawValue: 0)
+    }()
 
-    public static var allZeros: OutputFlags {
-        return self(0)
-    }
+    /// Enable implementation-defined output processing.
+    public static let post = OutputFlags(OPOST)
 
-    /// enable following output processing
-    public static let OPOST = OutputFlags(UInt(Darwin.OPOST))
+    /// (not in POSIX) Map lowercase characters to uppercase on output.
+    public static let uppercased = OutputFlags(OLCUC)
 
-    /// map NL to CR-NL (ala CRMOD)
-    public static let ONLCR = OutputFlags(UInt(Darwin.ONLCR))
+    /// (XSI) Map NL to CR-NL on output.
+    public static let nlToCR = OutputFlags(ONLCR)
 
-    /// expand tabs to spaces
-    public static let OXTABS = OutputFlags(UInt(Darwin.OXTABS))
+    /// Map CR to NL on output.
+    public static let crToNL = OutputFlags(OCRNL)
 
-    /// discard EOT's (^D) on output)
-    public static let ONOEOT = OutputFlags(UInt(Darwin.ONOEOT))
+    /// Don't output CR at colun=mn 0.
+    public static let noCR = OutputFlags(ONOCR)
 
-    // TODO Should these be included?
-    //
-    // The following block of features is unimplemented.  Use of these flags in
-    // programs will currently result in unexpected behaviour.
-    //
-    // - Begin unimplemented features
-    //
-    // var OCRNL: Int32 { get } /* map CR to NL on output */
-    // var ONOCR: Int32 { get } /* no CR output at column 0 */
-    // var ONLRET: Int32 { get } /* NL performs CR function */
-    // var OFILL: Int32 { get } /* use fill characters for delay */
-    // var NLDLY: Int32 { get } /* \n delay */
-    // var TABDLY: Int32 { get } /* horizontal tab delay */
-    // var CRDLY: Int32 { get } /* \r delay */
-    // var FFDLY: Int32 { get } /* form feed delay */
-    // var BSDLY: Int32 { get } /* \b delay */
-    // var VTDLY: Int32 { get } /* vertical tab delay */
-    // var OFDEL: Int32 { get } /* fill is DEL, else NUL */
+    /// Don't output CR.
+    public static let nlOnly = OutputFlags(ONLRET)
+
+    /// Send fill characters for a delay, rather than using a timed delay.
+    public static let fill = OutputFlags(OFILL)
+
+    /// Fill character is ASCII DEL (0177). If unset, fill character is ASCII NUL ('\0'). (Not implemented on Linux.)
+    public static let fillDelete = OutputFlags(OFDEL)
+
+    /// Newline delay mask. Values are nl0 and nl1. [requires _BSD_SOURCE, _SVID_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let nlDelay = OutputFlags(NLDLY)
+    /// Newline delay mask. [requires _BSD_SOURCE, _SVID_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let nl0 = OutputFlags(NL0)
+    /// Newline delay mask. [requires _BSD_SOURCE, _SVID_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let nl1 = OutputFlags(NL1)
+
+    /**
+    Carriage return delay mask. Values are tab0, tab1, tab2, tab3 (or xTabs). A value of tab3, that is, xTabs, expands
+    tabs to spaces (with tab stops every eight columns). [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    */
+    public static let tabDelay = OutputFlags(TABDLY)
+    /// Carriage return delay mask. [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let tab1 = OutputFlags(TAB1)
+    /// Carriage return delay mask. [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let tab2 = OutputFlags(TAB2)
+    /**
+    carriage return delay mask. expandstabs to spaces (with tab stops every eight columns). [requires _bsd_source,
+    _svid_source, or _xopen_source]
+    */
+    public static let tab3 = OutputFlags(TAB3)
+    /**
+    carriage return delay mask. expandstabs to spaces (with tab stops every eight columns). [requires _bsd_source,
+    _svid_source, or _xopen_source]
+    */
+    public static let xTabs = OutputFlags(XTABS)
+
+    /**
+    Backspace delay mask. Values are bs0 or bs1. (Has never been implemented.) [requires _BSD_SOURCE, _SVID_SOURCE, or
+    _XOPEN_SOURCE]
+    */
+    public static let bsDelay = OutputFlags(BSDLY)
+    /// Backspace delay mask. (Has never been implemented.) [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let bs0 = OutputFlags(BS0)
+    /// Backspace delay mask. (Has never been implemented.) [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let bs1 = OutputFlags(BS1)
+
+    /// Vertical tab delay mask. Values are vt0 or vt1.
+    public static let vtDelay = OutputFlags(VTDLY)
+    /// Vertical tab delay mask.
+    public static let vt0 = OutputFlags(VT0)
+    /// Vertical tab delay mask.
+    public static let vt1 = OutputFlags(VT1)
+
+    /// Form feed delay mask. Values are FF0 or FF1. [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let ffDelay = OutputFlags(FFDLY)
+    /// Form feed delay mask. [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let ff0 = OutputFlags(FF0)
+    /// Form feed delay mask. [requires _BSD_SOURCE, _SVID_SOURCE, or _XOPEN_SOURCE]
+    public static let ff1 = OutputFlags(FF1)
 }

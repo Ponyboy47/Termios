@@ -3,12 +3,15 @@
 //  Termios
 //
 //  Created by Neil Pankey on 3/20/15.
-//  Copyright (c) 2015 Neil Pankey. All rights reserved.
+//  Copyright (c) 2019 Jacob Williams & Neil Pankey. All rights reserved.
 //
 
-import Darwin.POSIX.termios
+#if os(macOS)
+import Darwin
+#else
+import Glibc
+#endif
 import ErrNo
-import Result
 
 /// Swift wrapper around the raw C `termios` structure.
 public struct Termios {
@@ -20,9 +23,12 @@ public struct Termios {
     }
 
     /// Constructs a `Termios` structure from a given file descriptor `fd`.
-    public static func fetch(fd: Int32) -> Result<Termios, ErrNo> {
+    public static func fetch(fd: Int32) throws -> Termios {
         var raw = termios()
-        return tryMap(tcgetattr(fd, &raw)) { _ in Termios(raw) }
+        guard tcgetattr(fd, &raw) == 0 else {
+            throw ErrNo.lastError
+        }
+        return Termios(raw)
     }
 
     // MARK: Properties
@@ -53,40 +59,48 @@ public struct Termios {
 
     /// Input speed
     public var inputSpeed: UInt {
-        return raw.c_ispeed
+        return UInt(raw.c_ispeed)
     }
 
     /// Output speed
     public var outputSpeed: UInt {
-        return raw.c_ispeed
+        return UInt(raw.c_ispeed)
     }
 
     // MARK: Operations
 
     /// Updates the file descriptor's `Termios` structure.
-    public mutating func update(fd: Int32) -> Result<(), ErrNo> {
-        return try(tcsetattr(fd, TCSANOW, &raw))
+    public mutating func update(fd: Int32) throws {
+        guard tcsetattr(fd, TCSANOW, &raw) == 0 else {
+            throw ErrNo.lastError
+        }
     }
 
     /// Set the input speed.
-    public mutating func setInputSpeed(baud: UInt) -> Result<(), ErrNo> {
-        return try(cfsetispeed(&raw, baud))
+    public mutating func setInputSpeed(baud: UInt32) throws {
+        guard cfsetispeed(&raw, baud) == 0 else {
+            throw ErrNo.lastError
+        }
     }
 
     /// Set the output speed.
-    public mutating func setOutputSpeed(baud: UInt) -> Result<(), ErrNo> {
-        return try(cfsetospeed(&raw, baud))
+    public mutating func setOutputSpeed(baud: UInt32) throws {
+        guard cfsetospeed(&raw, baud) == 0 else {
+            throw ErrNo.lastError
+        }
     }
 
     /// Set both input and output speed.
-    public mutating func setSpeed(baud: UInt) -> Result<(), ErrNo> {
-        return try(cfsetspeed(&raw, baud))
+    public mutating func setSpeed(baud: UInt32) throws {
+        guard cfsetspeed(&raw, baud) == 0 else {
+            throw ErrNo.lastError
+        }
     }
 
     // MARK: Private
 
     /// Wraps the `termios` structure.
-    private init(_ termios: Darwin.termios) {
+    private init(_ termios: termios) {
         raw = termios
     }
 

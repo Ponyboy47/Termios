@@ -3,82 +3,88 @@
 //  Termios
 //
 //  Created by Neil Pankey on 3/20/15.
-//  Copyright (c) 2015 Neil Pankey. All rights reserved.
+//  Copyright (c) 2019 Jacob Williams & Neil Pankey. All rights reserved.
 //
 
-import Darwin.POSIX.termios
+#if os(macOS)
+import Darwin
+#else
+import Glibc
+#endif
 
 /// Control flag values in a `termios` structure.
-public struct ControlFlags : RawOptionSetType {
-    public var rawValue: UInt
+public struct ControlFlags: OptionSet {
+    public var rawValue: UInt32
 
-    public init(_ value: UInt) {
+    private init(_ value: Int32) {
+        self.init(rawValue: UInt32(value))
+    }
+
+    init(_ value: UInt32) {
         rawValue = value
     }
 
-    public init(rawValue value: UInt) {
+    public init(rawValue value: UInt32) {
         rawValue = value
     }
 
-    public init(nilLiteral: ()) {
-        rawValue = 0
-    }
+    public static let zero: ControlFlags = {
+        return .init(rawValue: 0)
+    }()
 
-    public static var allZeros: ControlFlags {
-        return self(0)
-    }
+    /// (not in POSIX) Baud speed mask (4+1 bits). [requires _BSD_SOURCE or _SVID_SOURCE]
+    public static let baud = ControlFlags(CBAUD)
 
-    /// ignore control flags
-    public static let CIGNORE = ControlFlags(UInt(Darwin.CIGNORE))
+    /// (not in POSIX) Extra baud speed mask (1 bit), included in baud. [requires _BSD_SOURCE or _SVID_SOURCE]
+    public static let baudExtra = ControlFlags(CBAUDEX)
 
-    /// character size mask
-    public static let CSIZE = ControlFlags(UInt(Darwin.CSIZE))
+    /// Character size mask. Values are s5, s6, s7, or s8.
+    public static let size = ControlFlags(CSIZE)
+    /// Character size mask.
+    public static let s5 = ControlFlags(CS5)
+    /// Character size mask.
+    public static let s6 = ControlFlags(CS6)
+    /// Character size mask.
+    public static let s7 = ControlFlags(CS7)
+    /// Character size mask.
+    public static let s8 = ControlFlags(CS8)
 
-    /// 5 bits (pseudo)
-    public static let CS5 = ControlFlags(UInt(Darwin.CS5))
+    /// Set two stop bitsm rather than one.
+    public static let stopBits = ControlFlags(CSTOPB)
 
-    /// 6 bits
-    public static let CS6 = ControlFlags(UInt(Darwin.CS6))
+    /// Enable receiver.
+    public static let read = ControlFlags(CREAD)
 
-    /// 7 bits
-    public static let CS7 = ControlFlags(UInt(Darwin.CS7))
+    /// Enable parity generation on output and parity checking for input.
+    public static let parity = ControlFlags(PARENB)
 
-    /// 8 bits
-    public static let CS8 = ControlFlags(UInt(Darwin.CS8))
+    /// If set, then parity for input and output is odd; otherwise even parity is used.
+    public static let oddParity = ControlFlags(PARODD)
 
-    /// send 2 stop bits
-    public static let CSTOPB = ControlFlags(UInt(Darwin.CSTOPB))
+    /// Lower modem control lines after last process closes the device (hang up).
+    public static let hangUp = ControlFlags(HUPCL)
 
-    /// enable receiver
-    public static let CREAD = ControlFlags(UInt(Darwin.CREAD))
+    /// Ignore modem control lines.
+    public static let local = ControlFlags(CLOCAL)
 
-    /// parity enable
-    public static let PARENB = ControlFlags(UInt(Darwin.PARENB))
+    #if os(macOS)
+    /// (not in POSIX) Block output from a noncurrent shell layer. For use by shl (shell layers).
+    public static let block = ControlFlags(LOBLK)
+    #endif
 
-    /// odd parity, else even
-    public static let PARODD = ControlFlags(UInt(Darwin.PARODD))
+    /**
+    (not in POSIX) Mask for input speeds. The values for the inputBaud bits are the same as the values for the baud
+    bits, shifted left IBSHIFT bits. [requires _BSD_SOURCE or _SVID_SOURCE] (Not implemented on Linux.)
+    */
+    public static let inputBaud = ControlFlags(CIBAUD)
 
-    /// hang up on last close
-    public static let HUPCL = ControlFlags(UInt(Darwin.HUPCL))
+    /**
+    (not in POSIX) Use "stick" (mark/space) parity (supported on certain serial devices): if oddParity is set, the
+    parity bit is always 1; if oddParity is not set, then the parity bit is always 0. [requires _BSD_SOURCE or
+    _SVID_SOURCE]
+    */
+    public static let cmsParity = ControlFlags(CMSPAR)
 
-    /// ignore modem status lines
-    public static let CLOCAL = ControlFlags(UInt(Darwin.CLOCAL))
-
-    /// CTS flow control of output
-    public static let CCTS_OFLOW = ControlFlags(UInt(Darwin.CCTS_OFLOW))
-
-    /// RTS flow control of input
-    public static let CRTS_IFLOW = ControlFlags(UInt(Darwin.CRTS_IFLOW))
-
-    /// DTR flow control of input
-    public static let CDTR_IFLOW = ControlFlags(UInt(Darwin.CDTR_IFLOW))
-
-    /// DSR flow control of output
-    public static let CDSR_OFLOW = ControlFlags(UInt(Darwin.CDSR_OFLOW))
-
-    /// DCD flow control of output
-    public static let CCAR_OFLOW = ControlFlags(UInt(Darwin.CCAR_OFLOW))
-
-    /// old name for `CCAR_OFLOW`
-    public static let MDMBUF = ControlFlags(UInt(Darwin.MDMBUF))
+    /// (not in POSIX) Enable RTS/CTS (hardware) flow control. [requires _BSD_SOURCE or _SVID_SOURCE]
+    public static let hwFlowControl = ControlFlags(CRTSCTS)
 }
