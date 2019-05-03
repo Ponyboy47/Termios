@@ -1,9 +1,15 @@
-## Termios
+# Termios
 Improving the auto-generated bindings for `termios` with additional type-safety and Swift-_isms_.
 
 ## Inspiration
 
 Lots of ideas were borrowed from [japaric/termios.rs](https://github.com/japaric/termios.rs).
+
+## Installation
+SPM:
+```swift
+.package(url: "https://github.com/Ponyboy47/Termios.git", from: "0.1.0")
+```
 
 ## Usage
 
