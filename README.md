@@ -15,20 +15,40 @@ SPM:
 
 ```swift
 import Termios
-import Darwin.C.stdio
 
-println("Hello, World!")
+let password: String
+print("Please enter the account password: ", terminator: "")
+do {
+    // Save the current terminal state
+    var old = try Termios.fetch(fd: STDIN_FILENO)
 
-let old = Termios.fetch(STDIN_FILENO).value!
-var new = old
-new.localFlags &= ~(.ECHO | .ICANON)
-new.update(STDIN_FILENO)
+    // Update the current terminal state to turn off echo
+    var new = old
+    new.localFlags.formSymmetricDifference([.echo, .canonical])
+    try new.update(fd: STDIN_FILENO)
 
-let c = getchar()
-println("\(c)\r")
-print("at start?")
+    // Ensure that the original terminal state is restored upon scope completion
+    defer {
+        do {
+            try old.update(fd: STDIN_FILENO)
+        } catch {
+            fatalError("Failed to reenable stdin echo with error: \(error)")
+        }
+    }
 
-getchar()
+    // Read input securely (without echoing characters to stdout)
+    guard let _pass = readLine() else {
+        fatalError("Swift process does not have a controlling terminal and cannot prompt for input")
+    }
+    password = _pass
+} catch {
+    fatalError("Failed to disable stdin echo with error: \(error)")
+}
+
+// Print a newline because the return key pressed by the user is not echoed
+print()
+
+print("The user entered \(password) as their secure input")
 ```
 
 ## License
