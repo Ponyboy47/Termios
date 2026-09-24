@@ -17,18 +17,19 @@ import ErrNo
 public struct Termios {
     // MARK: Constructors
 
-    /// Constructs an empty `Termios` structure.
-    public init() {
-        self.init(termios())
-    }
-
     /// Constructs a `Termios` structure from a given file descriptor `fd`.
     public static func fetch(fd: Int32) throws -> Termios {
         var raw = termios()
         guard tcgetattr(fd, &raw) == 0 else {
             throw ErrNo.lastError
         }
-        return Termios(raw)
+
+        var windowSize = winsize()
+        guard ioctl(fd, UInt(TIOCGWINSZ), &windowSize) == 0 else {
+            throw ErrNo.lastError
+        }
+
+        return Termios(raw: raw, windowSize: windowSize)
     }
 
     // MARK: Properties
@@ -67,6 +68,11 @@ public struct Termios {
         return UInt(raw.c_ispeed)
     }
 
+    /// Terminal size
+    public var size: (rows: Int, columns: Int) {
+        return (rows: Int(windowSize.ws_row), columns: Int(windowSize.ws_col))
+    }
+
     // MARK: Operations
 
     /// Updates the file descriptor's `Termios` structure.
@@ -99,13 +105,22 @@ public struct Termios {
         }
     }
 
+    /// Update terminal size
+    public mutating func readWinch(fd: Int32) throws {
+        guard ioctl(fd, UInt(TIOCGWINSZ), &windowSize) == 0 else {
+            throw ErrNo.lastError
+        }
+    }
+
     // MARK: Private
 
     /// Wraps the `termios` structure.
-    private init(_ termios: termios) {
-        raw = termios
+    private init(raw: termios, windowSize: winsize) {
+        self.raw = raw
+        self.windowSize = windowSize
     }
 
     /// The wrapped termios struct.
     private var raw: termios
+    private var windowSize: winsize
 }
