@@ -14,13 +14,14 @@ SPM:
 ## Usage
 
 ```swift
+import Foundation
 import Termios
 
 let password: String
 print("Please enter the account password: ", terminator: "")
 do {
     // Save the current terminal state
-    var old = try Termios.fetch(fd: STDIN_FILENO)
+    let old = try Termios.fetch(fd: STDIN_FILENO)
 
     // Update the current terminal state to turn off echo
     var new = old

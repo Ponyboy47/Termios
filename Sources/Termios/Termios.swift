@@ -70,10 +70,12 @@ public struct Termios {
     // MARK: Operations
 
     /// Updates the file descriptor's `Termios` structure.
-    public mutating func update(fd: Int32) throws {
-        guard tcsetattr(fd, TCSANOW, &raw) == 0 else {
+    public func update(fd: Int32) throws {
+      try withUnsafePointer(to: raw) { raw in
+        guard tcsetattr(fd, TCSANOW, raw) == 0 else {
             throw ErrNo.lastError
         }
+      }
     }
 
     /// Set the input speed.
